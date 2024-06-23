@@ -4,6 +4,9 @@ import sys
 import pygame
 import os
 import math
+import tkinter as tk
+from tkinter import Label
+from PIL import Image, ImageTk, ImageFilter
 from heapq import heappop, heappush
 
 # Colores
@@ -30,7 +33,6 @@ pygame.display.set_caption("Treasure Hunt")
 fuente = pygame.font.SysFont("Arial", 20)
 background_image = pygame.image.load("fondo.jpeg")
 
-
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -42,11 +44,9 @@ class Player(pygame.sprite.Sprite):
             sys.exit()
         self.rect = self.image.get_rect()
 
-
 def draw_circles(screen, color, positions, radius):
     for pos in positions:
         pygame.draw.circle(screen, color, pos, radius)
-
 
 def draw_background(image):
     screen.blit(pygame.transform.scale(image, (378, 464)), (0, 0))
@@ -55,11 +55,9 @@ def draw_background(image):
     draw_circles(screen, Red, rojos, 4)
     draw_circles(screen, Yellow, amarillos, 4)
 
-
 def draw_text(screen, text, font, color, position):
     text_surface = font.render(text, True, color)
     screen.blit(text_surface, position)
-
 
 def check_collision(rect, positions):
     for pos in positions:
@@ -67,11 +65,9 @@ def check_collision(rect, positions):
             return pos  # Devolver la posición del punto amarillo colisionado
     return None  # Devolver None si no hay colisión
 
-
 def initialize_player_position(player, positions):
     initial_position = random.choice(positions)
     player.rect.topleft = initial_position
-
 
 def format_time(milliseconds):
     minutes = int(milliseconds / 60000)
@@ -79,10 +75,8 @@ def format_time(milliseconds):
     millis = int(milliseconds % 1000)
     return f"{minutes:02}:{seconds:02}:{millis:03}"
 
-
 def calculate_distance(point1, point2):
     return math.hypot(point2[0] - point1[0], point2[1] - point1[1])
-
 
 def create_graph(points):
     graph = {}
@@ -93,7 +87,6 @@ def create_graph(points):
                 distance = calculate_distance(point1, point2)
                 graph[i].append((distance, j))
     return graph
-
 
 def dijkstra(graph, start_node):
     heap = [(0, start_node)]
@@ -109,7 +102,6 @@ def dijkstra(graph, start_node):
                 distances[neighbor] = distance
                 heappush(heap, (distance, neighbor))
     return distances
-
 
 def find_best_path(start_pos, yellow_points, green_points, total_time):
     points = [start_pos] + yellow_points + green_points
@@ -145,6 +137,51 @@ def find_best_path(start_pos, yellow_points, green_points, total_time):
                 best_path = path[::-1]
 
     return [points[i] for i in best_path]
+
+# Definimos la función para el minijuego
+def run_minigame():
+    # Creamos una nueva ventana de tkinter
+    minigame_window = tk.Tk()
+    minigame_window.title("Minijuego")
+    minigame_window.geometry("500x600")  # Establecemos el tamaño de la ventana
+
+    # Cargamos la imagen del minijuego y la convertimos a un formato compatible
+    pil_image = Image.open("back-minigame.jpeg")
+    pil_image = pil_image.resize((500, 600), resample=Image.BILINEAR)  # Redimensionamos la imagen con antialiasing
+    minigame_image = ImageTk.PhotoImage(pil_image)
+
+    # Mostramos la imagen de fondo en la ventana de tkinter
+    label = tk.Label(minigame_window, image=minigame_image)
+    label.image = minigame_image  # Mantenemos una referencia para evitar que la imagen sea recolectada por el recolector de basura
+    label.pack()
+
+    # Función para colocar las minas
+    def place_mines():
+        mines = 13
+        min_image = Image.open("mina.jpeg")  # Cargar la imagen de la mina
+        min_image = min_image.resize((20, 20))  # Redimensionar la imagen de la mina según sea necesario
+
+        for _ in range(mines):
+            x = random.randint(20, 470)  # Posiciones aleatorias dentro del rango de la ventana
+            y = random.randint(100, 500)  # Ajustado para evitar cortes
+            min_label = tk.Label(minigame_window)  # Etiqueta para la mina
+            min_label.image = ImageTk.PhotoImage(
+                min_image)  # Convertir la imagen de la mina a un formato compatible con tkinter
+            min_label.configure(image=min_label.image)  # Configurar la imagen de la etiqueta
+            min_label.place(x=x, y=y)  # Colocar la mina en la posición generada
+
+    # Llamamos a la función para colocar las minas
+    place_mines()
+
+    # Función para cerrar la ventana del minijuego
+    def close_minigame(event):
+        minigame_window.destroy()
+
+    # Cerramos la ventana del minijuego al hacer clic
+    minigame_window.bind("<Button-1>", close_minigame)
+
+    # Mantenemos la ventana abierta hasta que se cierre
+    minigame_window.mainloop()
 
 
 # Configuración del jugador
@@ -200,6 +237,7 @@ while run:
     collision_point = check_collision(player.rect, amarillos)
     if collision_point:
         amarillos.remove(collision_point)  # Eliminar el punto amarillo colisionado para evitar múltiples colisiones
+        run_minigame()  # Ejecutar el minijuego cuando se colisiona con un punto amarillo
 
     if player.rect.topleft == pos_player_final:
         run = False
