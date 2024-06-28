@@ -359,9 +359,6 @@ def run_minigame():
         minigame_window.after_cancel(after_id)  # Cancelar el temporizador after
         minigame_window.destroy()
 
-    # Cerramos la ventana del minijuego al hacer clic
-    minigame_window.bind("<Button-1>", close_minigame)
-
     # Mantenemos la ventana abierta hasta que se cierre
     minigame_window.mainloop()
 
