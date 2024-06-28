@@ -9,6 +9,15 @@ from tkinter import Label
 from PIL import Image, ImageTk, ImageFilter
 from heapq import heappop, heappush
 
+##Barra Gasolina
+from tqdm import tqdm
+loop=tqdm(total=5000,position=0,leave=False)
+for k in range(5000):
+         loop.set_description("Gasolina Gastada".format(k))
+         loop.update(1)
+loop.close()
+
+
 # Colores
 Black, White, Green, Red, Blue, Yellow = (0, 0, 0), (255, 255, 255), (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)
 
