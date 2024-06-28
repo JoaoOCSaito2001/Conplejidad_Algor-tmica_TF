@@ -5,9 +5,10 @@ import pygame
 import os
 import math
 import tkinter as tk
-from tkinter import Label
+from tkinter import Label, Button
 from PIL import Image, ImageTk, ImageFilter
 from heapq import heappop, heappush
+from threading import Thread
 
 # Colores
 Black, White, Green, Red, Blue, Yellow = (0, 0, 0), (255, 255, 255), (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)
@@ -32,6 +33,10 @@ screen = pygame.display.set_mode((378, 464))
 pygame.display.set_caption("Treasure Hunt")
 fuente = pygame.font.SysFont("Arial", 20)
 background_image = pygame.image.load("fondo.jpeg")
+coin_image = pygame.image.load("moneda.png")
+
+# Monedas del jugador
+monedas = 0
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -54,19 +59,14 @@ def draw_background(image):
     draw_circles(screen, Green, verdes, 5)
     draw_circles(screen, Red, rojos, 4)
     draw_circles(screen, Yellow, amarillos, 4)
-#barra de gasolina
-gasolina=100
-gasolina_max=100
-distancia_barra_gas=400
-porcentaje_gas=distancia_barra_gas/gasolina_max
-def draw_gas_bar():
-         gas_actual=porcentaje_gas*gasolina
-         pygame.draw.rect(Green,(50,50,distancia_barra_gas,25))
-         pygame.draw.rect(Red,(50,50,gas_actual,25))
 
 def draw_text(screen, text, font, color, position):
     text_surface = font.render(text, True, color)
     screen.blit(text_surface, position)
+
+def show_coins(screen, coin_image, coin_count, font, position):
+    screen.blit(pygame.transform.scale(coin_image, (25, 25)), position)
+    draw_text(screen, f"{coin_count}", font, Black, (position[0] + 30, position[1]))
 
 def check_collision(rect, positions):
     for pos in positions:
@@ -149,6 +149,7 @@ def find_best_path(start_pos, yellow_points, green_points, total_time):
 
 # Definimos la función para el minijuego
 def run_minigame():
+    global monedas  # Acceder a la variable global de monedas
     # Creamos una nueva ventana de tkinter
     minigame_window = tk.Tk()
     minigame_window.title("Minijuego")
@@ -214,12 +215,15 @@ def run_minigame():
         # Verificar colisión con el tesoro
         if (hook_x < treasure_x + 40 and hook_x + 40 > treasure_x and
             hook_y < treasure_y + 40 and hook_y + 40 > treasure_y):
+            global monedas
+            monedas += 50
             minigame_window.destroy()  # Cerrar la ventana del minijuego
 
         # Verificar colisión con las minas
         for mine_x, mine_y in mines_positions:
             if (hook_x < mine_x + 20 and hook_x + 40 > mine_x and
                 hook_y < mine_y + 20 and hook_y + 40 > mine_y):
+                monedas -= 25
                 minigame_window.destroy()  # Cerrar la ventana del minijuego al colisionar con una mina
                 return
 
@@ -263,6 +267,31 @@ def run_minigame():
     # Mantenemos la ventana abierta hasta que se cierre
     minigame_window.mainloop()
 
+# Función para mostrar la pantalla de fin del juego
+def show_game_over_screen(screen, monedas):
+    game_over_image = pygame.image.load("game_over.png")
+    screen.blit(pygame.transform.scale(game_over_image, (378, 464)), (0, 0))
+    pygame.display.update()
+    
+    # Mostrar la cantidad de monedas y un botón de reinicio en una nueva ventana de Tkinter
+    root = tk.Tk()
+    root.title("Game Over")
+    root.geometry("300x200")
+
+    # Mostrar la cantidad de monedas
+    label = tk.Label(root, text=f"Monedas obtenidas: {monedas}", font=("Arial", 16))
+    label.pack(pady=20)
+
+    # Botón para reiniciar el juego
+    def restart_game():
+        root.destroy()
+        main()  # Llamar a la función principal para reiniciar el juego
+
+    restart_button = tk.Button(root, text="Reiniciar", font=("Arial", 14), command=restart_game)
+    restart_button.pack(pady=20)
+
+    root.mainloop()
+
 # Configuración del jugador
 player = Player()
 all_sprites_list = pygame.sprite.Group(player)
@@ -282,61 +311,89 @@ animation_steps = 350  # Número de pasos para la animación entre puntos
 current_step = 0
 current_segment = 0
 
+# Bandera para controlar el estado del minijuego
+is_minigame_running = False
+
 def interpolate(start_pos, end_pos, step, total_steps):
     x = start_pos[0] + (end_pos[0] - start_pos[0]) * step / total_steps
     y = start_pos[1] + (end_pos[1] - start_pos[1]) * step / total_steps
     return (x, y)
 
-run = True
-clock = pygame.time.Clock()
-while run:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+def run_minigame_in_thread():
+    global is_minigame_running
+    is_minigame_running = True
+    thread = Thread(target=run_minigame)
+    thread.start()
+    thread.join()
+    is_minigame_running = False
+
+def main():
+    global monedas, run, current_step, current_segment, is_minigame_running, start_ticks
+    monedas = 0
+    run = True
+    current_step = 0
+    current_segment = 0
+    is_minigame_running = False
+    start_ticks = pygame.time.get_ticks()
+    player.rect.topleft = start_position
+    initialize_player_position(player, azules)
+
+    clock = pygame.time.Clock()
+    while run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+
+        screen.fill(White)
+        draw_background(background_image)
+        all_sprites_list.draw(screen)
+
+        # Calculando el tiempo restante
+        elapsed_ticks = pygame.time.get_ticks() - start_ticks
+        time_left = max(0, start_time - elapsed_ticks)
+
+        # Mostrando el temporizador en cuenta regresiva en la esquina superior izquierda
+        formatted_time = format_time(time_left)
+        draw_text(screen, f"Tiempo: {formatted_time}", fuente, Black, (10, 10))
+
+        # Mostrando la cantidad de monedas en la esquina superior derecha
+        show_coins(screen, coin_image, monedas, fuente, (300, 10))
+
+        # Mover el jugador a lo largo del camino óptimo con animación
+        if not is_minigame_running and current_segment < len(optimal_path) - 1:
+            start_pos = optimal_path[current_segment]
+            end_pos = optimal_path[current_segment + 1]
+            player.rect.topleft = interpolate(start_pos, end_pos, current_step, animation_steps)
+            current_step += 1
+
+            # Manejo de colisiones con los puntos amarillos
+            collision_point = check_collision(player.rect, amarillos)
+            if collision_point:
+                amarillos.remove(collision_point)  # Eliminar el punto amarillo colisionado para evitar múltiples colisiones
+                run_minigame_in_thread()  # Ejecutar el minijuego en un hilo separado
+
+            if current_step >= animation_steps:
+                current_step = 0
+                current_segment += 1
+
+        pygame.display.update()
+
+        if time_left <= 0:
+            # Fin del juego por tiempo agotado
+            screen.fill(White)
+            game_over_image = pygame.image.load("game_over.png")
+            screen.blit(pygame.transform.scale(game_over_image, (378, 464)), (0, 0))
+            pygame.display.update()
+            time.sleep(3)
+            show_game_over_screen(screen, monedas)
             run = False
 
-    screen.fill(White)
-    draw_background(background_image)
-    all_sprites_list.draw(screen)
-         draw_gas_bar()
+        if player.rect.topleft == pos_player_final:
+            run = False
 
-    # Calculando el tiempo restante
-    elapsed_ticks = pygame.time.get_ticks() - start_ticks
-    time_left = max(0, start_time - elapsed_ticks)
+        clock.tick(60)  # Control de la velocidad del juego
 
-    # Mostrando el temporizador en cuenta regresiva en la esquina superior izquierda
-    formatted_time = format_time(time_left)
-    draw_text(screen, f"Tiempo: {formatted_time}", fuente, Black, (10, 10))
+    pygame.quit()
 
-    # Mover el jugador a lo largo del camino óptimo con animación
-    if current_segment < len(optimal_path) - 1:
-        start_pos = optimal_path[current_segment]
-        end_pos = optimal_path[current_segment + 1]
-        player.rect.topleft = interpolate(start_pos, end_pos, current_step, animation_steps)
-        current_step += 1
-        if current_step >= animation_steps:
-            current_step = 0
-            current_segment += 1
-
-    pygame.display.update()
-
-    if time_left <= 0:
-        # Fin del juego por tiempo agotado
-        screen.fill(White)
-        game_over_image = pygame.image.load("game_over.png")
-        screen.blit(pygame.transform.scale(game_over_image, (378, 464)), (0, 0))
-        pygame.display.update()
-        time.sleep(3)
-        run = False
-
-    # Manejo de colisiones con los puntos amarillos
-    collision_point = check_collision(player.rect, amarillos)
-    if collision_point:
-        amarillos.remove(collision_point)  # Eliminar el punto amarillo colisionado para evitar múltiples colisiones
-        run_minigame()  # Ejecutar el minijuego cuando se colisiona con un punto amarillo
-
-    if player.rect.topleft == pos_player_final:
-        run = False
-
-    clock.tick(60)  # Control de la velocidad del juego
-
-pygame.quit()
+if __name__ == "__main__":
+    main()
