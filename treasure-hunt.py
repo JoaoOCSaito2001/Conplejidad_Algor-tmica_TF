@@ -389,6 +389,7 @@ def main():
             run = False
 
         if player.rect.topleft == pos_player_final:
+            show_game_over_screen(screen, monedas)
             run = False
 
         clock.tick(60)  # Control de la velocidad del juego
