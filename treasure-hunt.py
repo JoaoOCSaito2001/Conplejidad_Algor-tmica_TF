@@ -54,6 +54,15 @@ def draw_background(image):
     draw_circles(screen, Green, verdes, 5)
     draw_circles(screen, Red, rojos, 4)
     draw_circles(screen, Yellow, amarillos, 4)
+#barra de gasolina
+gasolina=100
+gasolina_max=100
+distancia_barra_gas=400
+porcentaje_gas=distancia_barra_gas/gasolina_max
+def draw_gas_bar():
+         gas_actual=porcentaje_gas*gasolina
+         pygame.draw.rect(Green,(50,50,distancia_barra_gas,25))
+         pygame.draw.rect(Red,(50,50,gas_actual,25))
 
 def draw_text(screen, text, font, color, position):
     text_surface = font.render(text, True, color)
@@ -288,6 +297,7 @@ while run:
     screen.fill(White)
     draw_background(background_image)
     all_sprites_list.draw(screen)
+         draw_gas_bar()
 
     # Calculando el tiempo restante
     elapsed_ticks = pygame.time.get_ticks() - start_ticks
