@@ -269,7 +269,7 @@ start_ticks = pygame.time.get_ticks()
 optimal_path = find_best_path(start_position, amarillos, verdes, start_time)
 
 # Variable para la animación
-animation_steps = 350  # Número de pasos para la animación entre puntos
+animation_steps = 50  # Número de pasos para la animación entre puntos
 current_step = 0
 current_segment = 0
 
