@@ -184,6 +184,9 @@ def run_minigame():
     treasure_label.image = treasure_photo
     treasure_label.place(x=treasure_x, y=treasure_y)
 
+    # Lista para almacenar las posiciones de las minas
+    mines_positions = []
+
     # Función para mover el anzuelo
     def move_hook(event):
         nonlocal hook_x
@@ -195,16 +198,24 @@ def run_minigame():
 
     # Función para actualizar la posición del anzuelo
     def update_hook():
-        nonlocal hook_y
+        nonlocal hook_y, after_id
         hook_y += hook_speed
         hook_label.place(x=hook_x, y=hook_y)
         
         # Verificar colisión con el tesoro
-        if hook_x in range(treasure_x, treasure_x + 40) and hook_y in range(treasure_y, treasure_y + 40):
+        if (hook_x < treasure_x + 40 and hook_x + 40 > treasure_x and
+            hook_y < treasure_y + 40 and hook_y + 40 > treasure_y):
             minigame_window.destroy()  # Cerrar la ventana del minijuego
 
+        # Verificar colisión con las minas
+        for mine_x, mine_y in mines_positions:
+            if (hook_x < mine_x + 20 and hook_x + 40 > mine_x and
+                hook_y < mine_y + 20 and hook_y + 40 > mine_y):
+                minigame_window.destroy()  # Cerrar la ventana del minijuego al colisionar con una mina
+                return
+
         if hook_y < 600 - hook_image.height:
-            minigame_window.after(50, update_hook)
+            after_id = minigame_window.after(50, update_hook)
 
     # Llamamos a la función para colocar las minas
     def place_mines():
@@ -215,6 +226,7 @@ def run_minigame():
         for _ in range(mines):
             x = random.randint(20, 470)  # Posiciones aleatorias dentro del rango de la ventana
             y = random.randint(100, 500)  # Ajustado para evitar cortes
+            mines_positions.append((x, y))  # Almacenar la posición de la mina
             min_label = tk.Label(minigame_window, image=ImageTk.PhotoImage(min_image))  # Etiqueta para la mina
             min_label.image = ImageTk.PhotoImage(min_image)  # Convertir la imagen de la mina a un formato compatible con tkinter
             min_label.configure(image=min_label.image)  # Configurar la imagen de la etiqueta
@@ -228,10 +240,12 @@ def run_minigame():
     minigame_window.bind("<Right>", move_hook)
 
     # Iniciar la actualización del anzuelo
-    update_hook()
+    after_id = minigame_window.after(50, update_hook)
 
     # Función para cerrar la ventana del minijuego
     def close_minigame(event):
+        nonlocal after_id
+        minigame_window.after_cancel(after_id)  # Cancelar el temporizador after
         minigame_window.destroy()
 
     # Cerramos la ventana del minijuego al hacer clic
