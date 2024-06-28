@@ -223,10 +223,11 @@ def run_minigame():
         for mine_x, mine_y in mines_positions:
             if (hook_x < mine_x + 20 and hook_x + 40 > mine_x and
                 hook_y < mine_y + 20 and hook_y + 40 > mine_y):
-                monedas -= 25
+                if monedas > 0:
+                    monedas = max(monedas - 25, 0)  # Asegurar que las monedas no bajen de 0
                 minigame_window.destroy()  # Cerrar la ventana del minijuego al colisionar con una mina
                 return
-
+            
         if hook_y < 600 - hook_image.height:
             after_id = minigame_window.after(50, update_hook)
 
