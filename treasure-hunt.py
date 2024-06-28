@@ -268,6 +268,16 @@ start_ticks = pygame.time.get_ticks()
 # Calculando el camino óptimo
 optimal_path = find_best_path(start_position, amarillos, verdes, start_time)
 
+# Variable para la animación
+animation_steps = 350  # Número de pasos para la animación entre puntos
+current_step = 0
+current_segment = 0
+
+def interpolate(start_pos, end_pos, step, total_steps):
+    x = start_pos[0] + (end_pos[0] - start_pos[0]) * step / total_steps
+    y = start_pos[1] + (end_pos[1] - start_pos[1]) * step / total_steps
+    return (x, y)
+
 run = True
 clock = pygame.time.Clock()
 while run:
@@ -287,10 +297,15 @@ while run:
     formatted_time = format_time(time_left)
     draw_text(screen, f"Tiempo: {formatted_time}", fuente, Black, (10, 10))
 
-    # Mover el jugador a lo largo del camino óptimo
-    if optimal_path:
-        next_pos = optimal_path.pop(0)
-        player.rect.topleft = next_pos
+    # Mover el jugador a lo largo del camino óptimo con animación
+    if current_segment < len(optimal_path) - 1:
+        start_pos = optimal_path[current_segment]
+        end_pos = optimal_path[current_segment + 1]
+        player.rect.topleft = interpolate(start_pos, end_pos, current_step, animation_steps)
+        current_step += 1
+        if current_step >= animation_steps:
+            current_step = 0
+            current_segment += 1
 
     pygame.display.update()
 
